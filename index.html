@@ -6,13 +6,15 @@
   <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
-  <style>
-    body { margin: 0; padding: 0; }
-    #map { position: absolute; top: 0; bottom: 0; width: 100%; }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div id="map"></div>
+  <div id="route-info">
+    <div id="distance"></div>
+    <div id="duration"></div>
+  </div>
+
   <script>
     mapboxgl.accessToken = ""; // GitHub用
     // mapboxgl.accessToken = "pk.xxx"; // ローカル・本番用
@@ -24,13 +26,73 @@
       zoom: 14
     });
 
-    map.addControl(
-      new mapboxgl.GeolocateControl({
-        positionOptions: {enableHighAccuracy: true },
-        trackUserLocation: true,
-        showUserHeading: true
-      })
-    );
+    const destination = [139.622, 35.466]; 
+    map.on('load', () => {
+        const geolocate = new mapboxgl.GeolocateControl({
+            positionOptions: { enableHighAccuracy: true },
+            trackUserLocation: true,
+            showUserHeading: true
+        });
+        map.addControl(geolocate);
+
+        geolocate.on('geolocate', (e) => {
+            const origin = [e.coords.longitude, e.coords.latitude];
+
+            // Directions API を呼び出す
+            fetch('getRoute.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    origin: origin,
+                    destination: destination
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                const route = data.routes[0].geometry;
+
+                // 既存のルートを消す（再描画用）
+                if (map.getSource('route')) {
+                    map.removeLayer('route');
+                    map.removeSource('route');
+                }
+
+                // ルートを追加
+                map.addSource('route', {
+                    type: 'geojson',
+                    data: {
+                        type: 'Feature',
+                        geometry: route
+                    }
+                });
+
+                map.addLayer({
+                    id: 'route',
+                    type: 'line',
+                    source: 'route',
+                    paint: {
+                        'line-color': '#007AFF',
+                        'line-width': 5
+                    }
+                });
+
+                const durationMin = Math.round(data.routes[0].duration / 60);
+                const distanceMeters = data.routes[0].distance;
+
+                let distanceText;
+                if (distanceMeters < 1000) {
+                    distanceText = `${Math.round(distanceMeters)} m`;
+                } else {
+                    distanceText = `${(distanceMeters / 1000).toFixed(1)} km`;
+                }
+
+                document.getElementById('route-info').style.display = 'block';
+                document.getElementById('distance').textContent = `距離：${distanceText}`;
+                document.getElementById('duration').textContent = `所要時間：${durationMin}分`;
+            });
+        });
+    });
+
   </script>
 </body>
 </html>
