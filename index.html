@@ -9,6 +9,10 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <div class="preset-buttons">
+    <button id="tokyo-btn">東京駅</button>
+    <button id="yokohama-btn">横浜駅</button>
+  </div>
   <div id="map"></div>
   <div id="route-info">
     <div id="distance"></div>
@@ -26,7 +30,7 @@
       zoom: 14
     });
 
-    const destination = [139.622, 35.466]; 
+    let destination = [139.622, 35.466]; 
     map.on('load', () => {
         const geolocate = new mapboxgl.GeolocateControl({
             positionOptions: { enableHighAccuracy: true },
@@ -94,5 +98,6 @@
     });
 
   </script>
+  <script src="script.js"></script>
 </body>
 </html>
