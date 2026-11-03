@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>WalkNav Map</title>
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css">
+  	<script>
+		// ★★★ 日本語化ロジックここに書く ★★★
+
+		const instructionMap = {
+			"Turn right": "右折します",
+                        "Turn left": "左折します",
+                        "Continue straight": "直進します",
+                        "Continue on": "直進します",
+                        "You have arrived at your destination.": "目的地に到着しました",
+			"SLight right": "やや右方向です",
+			"SLight left": "やや左方向です",
+			"Head north": "北方向へ進みます",
+			"Head south": "南方向へ進みます",
+			"Head east": "東方向へ進みます",
+			"Head west": "西方向へ進みます"
+		};
+
+		function translateInstruction(text, mode = "normal") {
+			let jp = text;
+
+			for (const en in instructionMap) {
+				if (text.includes(en)) {
+					jp = text.replace(en, instructionMap[en]);
+					break;
+				}
+			}
+
+			if (mode === "polite") {
+				jp = jp.replace("します", "いたします");
+			}
+
+			return jp;
+		}
+	</script>
+</head>
+<body>
+  <div class="preset-buttons">
+    <button id="tokyo-btn">東京駅</button>
+    <button id="yokohama-btn">横浜駅</button>
+  </div>
+  <div id="map"></div>
+
+  <div id="route-info">
+    <div id="distance"></div>
+    <div id="duration"></div>
+  </div>
+
+  <div id="steps"></div>
+  <script>
+    mapboxgl.accessToken = ""; // GitHub用
+    // mapboxgl.accessToken = "pk.xxx"; // ローカル・本番用
+
+    const map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: [139.7671, 35.6812], // 東京駅
+      zoom: 14
+    });
+
+    let destination = [139.622, 35.466]; 
+    map.on('load', () => {
+        const geolocate = new mapboxgl.GeolocateControl({
+            positionOptions: { enableHighAccuracy: true },
+            trackUserLocation: true,
+            showUserHeading: true
+        });
+        map.addControl(geolocate);
+
+        geolocate.on('geolocate', (e) => {
+            const origin = [e.coords.longitude, e.coords.latitude];
+
+            // Directions API を呼び出す
+            fetch('getRoute.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    origin: origin,
+                    destination: destination
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                const route = data.routes[0].geometry;
+
+                // 既存のルートを消す（再描画用）
+                if (map.getSource('route')) {
+                    map.removeLayer('route');
+                    map.removeSource('route');
+                }
+
+                // ルートを追加
+                map.addSource('route', {
+                    type: 'geojson',
+                    data: {
+                        type: 'Feature',
+                        geometry: route
+                    }
+                });
+
+                map.addLayer({
+                    id: 'route',
+                    type: 'line',
+                    source: 'route',
+                    paint: {
+                        'line-color': '#007AFF',
+                        'line-width': 5
+                    }
+                });
+
+                const durationMin = Math.round(data.routes[0].duration / 60);
+                const distanceMeters = data.routes[0].distance;
+
+                let distanceText;
+                if (distanceMeters < 1000) {
+                    distanceText = `${Math.round(distanceMeters)} m`;
+                } else {
+                    distanceText = `${(distanceMeters / 1000).toFixed(1)} km`;
+                }
+
+                document.getElementById('route-info').style.display = 'block';
+                document.getElementById('distance').textContent = `距離：${distanceText}`;
+                document.getElementById('duration').textContent = `所要時間：${durationMin}分`;
+
+                // Turn-by-Turn案内表示
+                const steps = data.routes[0].legs[0].steps;
+                const stepsList = document.getElementById("steps");
+
+                // 既存カード削除
+                stepsList.innerHTML = "";
+
+                steps.forEach(step => {
+                    const stepElement = document.createElement('div');
+                    stepElement.className = 'step-card';
+
+                    stepElement.innerHTML = `
+                        <div class="step-instruction">
+                            ${translateInstruction(
+                                step.maneuver.instruction
+                            )}
+                        </div>
+                        <div class="step-distance">
+                            約 ${Math.round(step.distance)}m
+                        </div>
+                    `;
+                    stepsList.appendChild(stepElement);
+                });
+            });
+        });
+    });
+
+  </script>
+  <script src="script.js"></script>
+</body>
+</html>
