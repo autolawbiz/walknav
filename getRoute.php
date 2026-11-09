@@ -16,7 +16,10 @@ $apiKey = "";  // GitHub用
 
 $url = "https://api.mapbox.com/directions/v5/mapbox/walking/"
      . "{$origin[0]},{$origin[1]};{$destination[0]},{$destination[1]}"
-     . "?geometries=geojson&overview=full&access_token={$apiKey}";
+     . "?geometries=geojson"
+     . "&overview=full"
+     . "&steps=true"
+     . "&access_token={$apiKey}";
 
 // API呼び出し
 $response = file_get_contents($url);
