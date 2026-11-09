@@ -7,6 +7,40 @@
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
   <link rel="stylesheet" href="style.css">
+  	<script>
+		// ★★★ 日本語化ロジックここに書く ★★★
+
+		const instructionMap = {
+			"Turn right": "右折します",
+                        "Turn left": "左折します",
+                        "Continue straight": "直進します",
+                        "Continue on": "直進します",
+                        "You have arrived at your destination.": "目的地に到着しました",
+			"SLight right": "やや右方向です",
+			"SLight left": "やや左方向です",
+			"Head north": "北方向へ進みます",
+			"Head south": "南方向へ進みます",
+			"Head east": "東方向へ進みます",
+			"Head west": "西方向へ進みます"
+		};
+
+		function translateInstruction(text, mode = "normal") {
+			let jp = text;
+
+			for (const en in instructionMap) {
+				if (text.includes(en)) {
+					jp = text.replace(en, instructionMap[en]);
+					break;
+				}
+			}
+
+			if (mode === "polite") {
+				jp = jp.replace("します", "いたします");
+			}
+
+			return jp;
+		}
+	</script>
 </head>
 <body>
   <div class="preset-buttons">
@@ -19,6 +53,7 @@
     <div id="duration"></div>
   </div>
 
+  <div id="steps"></div>
   <script>
     mapboxgl.accessToken = ""; // GitHub用
     // mapboxgl.accessToken = "pk.xxx"; // ローカル・本番用
@@ -93,6 +128,30 @@
                 document.getElementById('route-info').style.display = 'block';
                 document.getElementById('distance').textContent = `距離：${distanceText}`;
                 document.getElementById('duration').textContent = `所要時間：${durationMin}分`;
+
+                // Turn-by-Turn案内表示
+                const steps = data.routes[0].legs[0].steps;
+                const stepsList = document.getElementById("steps");
+
+                // 既存カード削除
+                stepsList.innerHTML = "";
+
+                steps.forEach(step => {
+                    const stepElement = document.createElement('div');
+                    stepElement.className = 'step-card';
+
+                    stepElement.innerHTML = `
+                        <div class="step-instruction">
+                            ${translateInstruction(
+                                step.maneuver.instruction
+                            )}
+                        </div>
+                        <div class="step-distance">
+                            約 ${Math.round(step.distance)}m
+                        </div>
+                    `;
+                    stepsList.appendChild(stepElement);
+                });
             });
         });
     });
