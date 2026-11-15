@@ -133,11 +133,38 @@ searchBtn.addEventListener("click", async () => {
 
     destination = [lng, lat];
 
-    const testOrigin =
-        [139.630, 35.450];
+    const DEV_MODE = true;
 
-    startNavigation(
-        testOrigin,
-        destination
-    );
+    if (DEV_MODE) {
+
+        const origin = [
+            139.630,
+            35.450
+        ];
+
+        startNavigation(
+            origin,
+            destination
+        );
+
+    } else {
+
+        navigator.geolocation
+            .getCurrentPosition(
+                (position) => {
+
+                    const origin = [
+                        position.coords.longitude,
+                        position.coords.latitude
+                    ];
+
+                    startNavigation(
+                        origin,
+                        destination
+                    );
+
+                }
+            );
+
+    }
 });
