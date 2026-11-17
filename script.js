@@ -41,6 +41,17 @@ function startNavigation(
             }
         });
 
+        // ルート全体が見えるように自動ズーム
+        const bounds = new mapboxgl.LngLatBounds();
+
+        route.coordinates.forEach(coord => {
+            bounds.extend(coord);
+        });
+
+        map.fitBounds(bounds, {
+            padding: 50
+        });
+
         const durationMin = Math.round(data.routes[0].duration / 60);
         const distanceMeters = data.routes[0].distance;
 
